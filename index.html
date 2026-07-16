@@ -645,6 +645,43 @@
             right: 40px;
             z-index: 1000;
         }
+
+        .camera-select {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            z-index: 15;
+            display: none;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fdfaf2;
+            font-family: 'Cinzel', serif;
+            border-radius: 8px;
+            padding: 8px 36px 8px 16px;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: all 0.2s;
+            outline: none;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+        }
+
+        .camera-select:hover {
+            background-color: rgba(0, 0, 0, 0.85);
+            border-color: rgba(255, 255, 255, 0.45);
+            transform: scale(1.02);
+        }
+
+        .camera-select option {
+            background-color: #1a1a1a;
+            color: #fdfaf2;
+        }
     </style>
 </head>
 
@@ -713,6 +750,9 @@
                                 d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z" />
                         </svg>
                     </button>
+
+                    <!-- Camera Select Dropdown (bottom-left) -->
+                    <select id="camera-select" class="camera-select" title="Select Camera"></select>
 
 
                 </div>
@@ -881,6 +921,7 @@
         const btnStartCapture = document.getElementById('btn-start-capture');
         const btnCancelCapture = document.getElementById('btn-cancel-capture');
         const switchCameraBtn = document.getElementById('switch-camera-btn');
+        const cameraSelect = document.getElementById('camera-select');
 
         const resultPhotoPreview = document.getElementById('result-photo-preview');
         const processCanvas = document.getElementById('process-canvas');
@@ -915,6 +956,7 @@
         let isCountingDown = false;
         let localStream = null;
         let activeFacingMode = 'environment'; // default to back camera
+        let activeDeviceId = null;
         let processedImageBlob = null;
         let processedImageURL = null; // cloud URL
         let isUploading = false; // upload state tracking
@@ -1008,7 +1050,8 @@
 
                 const constraints = {
                     video: {
-                        facingMode: activeFacingMode,
+                        deviceId: activeDeviceId ? { exact: activeDeviceId } : undefined,
+                        facingMode: activeDeviceId ? undefined : activeFacingMode,
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     },
@@ -1021,8 +1064,11 @@
                 cameraPlaceholder.style.display = 'none';
                 cameraContainer.classList.add('active');
 
-                // Show floating control overlays
+                // Show floating control overlays (fallback default)
                 switchCameraBtn.style.display = 'flex';
+
+                // Populate/update camera device list
+                await updateCameraList();
 
                 // Start camera capture countdown instantly
                 startCaptureCountdown();
@@ -1066,14 +1112,87 @@
 
             // Hide floating overlays
             switchCameraBtn.style.display = 'none';
+            cameraSelect.style.display = 'none';
+        }
+
+        async function updateCameraList() {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                    switchCameraBtn.style.display = 'flex';
+                    cameraSelect.style.display = 'none';
+                    return;
+                }
+
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+                cameraSelect.innerHTML = '';
+
+                if (videoDevices.length > 1) {
+                    // Check if current activeDeviceId still exists in list
+                    if (activeDeviceId) {
+                        const deviceExists = videoDevices.some(device => device.deviceId === activeDeviceId);
+                        if (!deviceExists) {
+                            activeDeviceId = null;
+                            // Selected camera unplugged, restart stream with default
+                            if (localStream) {
+                                setTimeout(startCamera, 100);
+                                return;
+                            }
+                        }
+                    }
+
+                    videoDevices.forEach((device, index) => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${index + 1}`;
+                        if (activeDeviceId === device.deviceId) {
+                            option.selected = true;
+                        } else if (!activeDeviceId && localStream) {
+                            const currentTrack = localStream.getVideoTracks()[0];
+                            if (currentTrack && currentTrack.getSettings && currentTrack.getSettings().deviceId === device.deviceId) {
+                                option.selected = true;
+                                activeDeviceId = device.deviceId;
+                            }
+                        }
+                        cameraSelect.appendChild(option);
+                    });
+
+                    cameraSelect.style.display = 'block';
+                    switchCameraBtn.style.display = 'none';
+                } else {
+                    cameraSelect.style.display = 'none';
+                    switchCameraBtn.style.display = 'flex';
+                }
+            } catch (err) {
+                console.error("Error enumerating devices:", err);
+                switchCameraBtn.style.display = 'flex';
+                cameraSelect.style.display = 'none';
+            }
         }
 
         switchCameraBtn.addEventListener('click', () => {
             activeFacingMode = activeFacingMode === 'user' ? 'environment' : 'user';
+            activeDeviceId = null; // reset to use facing mode toggle
             if (localStream) {
                 startCamera();
             }
         });
+
+        cameraSelect.addEventListener('change', (e) => {
+            activeDeviceId = e.target.value;
+            if (localStream) {
+                startCamera();
+            }
+        });
+
+        if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+            navigator.mediaDevices.addEventListener('devicechange', () => {
+                if (localStream) {
+                    updateCameraList();
+                }
+            });
+        }
 
         async function detectHuman() {
             if (!objectDetector || !localStream || video.readyState !== 4 || isCountingDown) return;
