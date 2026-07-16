@@ -1244,8 +1244,8 @@
             processCanvas.width = vW + (borderTopLR * 2);
             processCanvas.height = vH + borderTopLR + borderBottom;
 
-            // Draw white border background
-            ctx.fillStyle = '#ffffff';
+            // Draw black border background
+            ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, processCanvas.width, processCanvas.height);
 
             // Draw video frame inside border
@@ -1293,13 +1293,13 @@
 
             // Draw Logo inside the actual photo frame
             if (logoImg.complete && logoImg.naturalWidth !== 0) {
-                const maxLogoHeight = vH * 0.28; // 28% of photo height
+                const maxLogoHeight = vH * 0.12; // 12% of photo height (smaller)
                 const aspectRatio = logoImg.naturalWidth / logoImg.naturalHeight;
                 const logoHeight = maxLogoHeight;
                 const logoWidth = logoHeight * aspectRatio;
 
-                // Padding from the edge of the actual photo frame
-                const padding = Math.round(vH * 0.04);
+                // Padding from the edge of the actual photo frame (reduced to move logo right/down)
+                const padding = Math.round(vH * 0.015);
 
                 const logoX = borderTopLR + vW - logoWidth - padding;
                 const logoY = borderTopLR + vH - logoHeight - padding;
