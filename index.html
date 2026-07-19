@@ -664,7 +664,7 @@
             transition: all 0.2s;
             outline: none;
             font-size: 0.9rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
             appearance: none;
             -webkit-appearance: none;
             background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
@@ -1292,7 +1292,7 @@
             const vH = video.videoHeight;
 
             // Make border thickness uniform and bigger (e.g. 20% of video height)
-            const borderSize = Math.round(vH * 0.20); 
+            const borderSize = Math.round(vH * 0.20);
 
             processCanvas.width = vW + (borderSize * 2);
             processCanvas.height = vH + (borderSize * 2);
@@ -1344,15 +1344,15 @@
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
 
-            // Draw Logo inside the border (bottom right)
+            // Draw Logo inside the border (top right)
             if (logoImg.complete && logoImg.naturalWidth !== 0) {
-                const logoHeight = Math.round(borderSize * 0.85); // Scale to fit nicely in the border (larger)
+                const logoHeight = Math.round(borderSize * 0.85); // Scale to fit nicely in the top border
                 const aspectRatio = logoImg.naturalWidth / logoImg.naturalHeight;
                 const logoWidth = logoHeight * aspectRatio;
 
-                // Place logo in the bottom-right corner of the border, with a bit of right padding
+                // Place logo in the top-right corner of the border
                 const logoX = w - logoWidth - Math.round(borderSize * 0.4);
-                const logoY = h - (borderSize / 2) - (logoHeight / 2);
+                const logoY = (borderSize / 2) - (logoHeight / 2);
 
                 ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
             }
