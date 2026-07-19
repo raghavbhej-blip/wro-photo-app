@@ -1346,12 +1346,12 @@
 
             // Draw Logo inside the border (bottom right)
             if (logoImg.complete && logoImg.naturalWidth !== 0) {
-                const logoHeight = Math.round(borderSize * 0.6); // Scale to fit nicely in the border
+                const logoHeight = Math.round(borderSize * 0.85); // Scale to fit nicely in the border (larger)
                 const aspectRatio = logoImg.naturalWidth / logoImg.naturalHeight;
                 const logoWidth = logoHeight * aspectRatio;
 
                 // Place logo in the bottom-right corner of the border, with a bit of right padding
-                const logoX = w - logoWidth - Math.round(borderSize * 0.5);
+                const logoX = w - logoWidth - Math.round(borderSize * 0.4);
                 const logoY = h - (borderSize / 2) - (logoHeight / 2);
 
                 ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
