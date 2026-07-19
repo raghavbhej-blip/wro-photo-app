@@ -1053,17 +1053,19 @@
                     try {
                         const devices = await navigator.mediaDevices.enumerateDevices();
                         const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                        const rapoDevice = videoDevices.find(d => d.label && d.label.toLowerCase().includes('rapo'));
+                        const rapoDevice = videoDevices.find(d => d.label && (d.label.toLowerCase().includes('rapo') || d.label.toLowerCase().includes('rapoo')));
                         if (rapoDevice) {
                             activeDeviceId = rapoDevice.deviceId;
-                            console.log("Auto-selected Rapo camera: " + rapoDevice.label);
+                            console.log("Auto-selected Rapoo camera: " + rapoDevice.label);
+                        } else {
+                            console.log("Rapoo camera not detected during startup. Using inbuilt camera.");
                         }
                     } catch (e) {
                         console.log("Could not pre-enumerate devices:", e);
                     }
                 }
 
-                const constraints = {
+                let constraints = {
                     video: {
                         deviceId: activeDeviceId ? { exact: activeDeviceId } : undefined,
                         facingMode: activeDeviceId ? undefined : activeFacingMode,
@@ -1073,7 +1075,28 @@
                     audio: false
                 };
 
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (streamErr) {
+                    console.warn("Failed to open camera with active constraints:", streamErr);
+                    // If a specific camera device was requested (like Rapo) and it failed, retry with default/inbuilt camera
+                    if (activeDeviceId) {
+                        console.log("Retrying with default/inbuilt camera fallback...");
+                        activeDeviceId = null;
+                        constraints = {
+                            video: {
+                                facingMode: activeFacingMode,
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            },
+                            audio: false
+                        };
+                        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    } else {
+                        throw streamErr;
+                    }
+                }
+
                 video.srcObject = localStream;
                 video.style.display = 'block';
                 cameraPlaceholder.style.display = 'none';
@@ -1143,30 +1166,35 @@
 
                 cameraSelect.innerHTML = '';
 
-                // Auto-detect and switch to Rapo camera if it exists in list and is not active
-                const rapoDevice = videoDevices.find(d => d.label && d.label.toLowerCase().includes('rapo'));
-                if (rapoDevice && activeDeviceId !== rapoDevice.deviceId) {
-                    activeDeviceId = rapoDevice.deviceId;
-                    console.log("Switching to Rapo camera: " + rapoDevice.label);
-                    // Re-start camera stream with the Rapo camera
-                    setTimeout(startCamera, 100);
-                    return;
-                }
+                // Find the Rapoo camera (support both "rapo" and "rapoo")
+                const rapoDevice = videoDevices.find(d => d.label && (d.label.toLowerCase().includes('rapo') || d.label.toLowerCase().includes('rapoo')));
 
-                if (videoDevices.length > 1) {
-                    // Check if current activeDeviceId still exists in list
+                if (rapoDevice) {
+                    if (activeDeviceId !== rapoDevice.deviceId) {
+                        activeDeviceId = rapoDevice.deviceId;
+                        console.log("Switching to Rapoo camera: " + rapoDevice.label);
+                        // Re-start camera stream with the Rapoo camera
+                        setTimeout(startCamera, 100);
+                        return;
+                    }
+                } else {
+                    // Rapoo camera is NOT detected!
+                    console.log("Rapoo camera not detected.");
+                    // Check if current activeDeviceId was pointing to a camera that is now disconnected
                     if (activeDeviceId) {
-                        const deviceExists = videoDevices.some(device => device.deviceId === activeDeviceId);
-                        if (!deviceExists) {
+                        const deviceStillExists = videoDevices.some(device => device.deviceId === activeDeviceId);
+                        if (!deviceStillExists) {
+                            console.log("Active camera disconnected. Falling back to inbuilt camera.");
                             activeDeviceId = null;
-                            // Selected camera unplugged, restart stream with default
                             if (localStream) {
                                 setTimeout(startCamera, 100);
                                 return;
                             }
                         }
                     }
+                }
 
+                if (videoDevices.length > 1) {
                     videoDevices.forEach((device, index) => {
                         const option = document.createElement('option');
                         option.value = device.deviceId;
@@ -1263,36 +1291,36 @@
             const vW = video.videoWidth;
             const vH = video.videoHeight;
 
-            const borderTopLR = Math.round(vW * 0.05); // 5% border left/right/top
-            const borderBottom = Math.round(vH * 0.16); // 16% border bottom
+            // Make border thickness uniform and bigger (e.g. 20% of video height)
+            const borderSize = Math.round(vH * 0.20); 
 
-            processCanvas.width = vW + (borderTopLR * 2);
-            processCanvas.height = vH + borderTopLR + borderBottom;
+            processCanvas.width = vW + (borderSize * 2);
+            processCanvas.height = vH + (borderSize * 2);
 
             // Draw black border background
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, processCanvas.width, processCanvas.height);
 
             // Draw video frame inside border
-            ctx.drawImage(video, borderTopLR, borderTopLR, vW, vH);
+            ctx.drawImage(video, borderSize, borderSize, vW, vH);
 
             // Process image: watermark it!
-            applyWatermark(processCanvas.width, processCanvas.height, borderBottom, borderTopLR, vW, vH);
+            applyWatermark(processCanvas.width, processCanvas.height, borderSize, vW, vH);
 
             // Transition to Screen 3 (Result Screen)
             showScreen('screen-result');
         }
 
         // 3. Canvas Manipulation & Watermarking
-        function applyWatermark(w, h, borderBottom, borderTopLR, vW, vH) {
+        function applyWatermark(w, h, borderSize, vW, vH) {
             const ctx = processCanvas.getContext('2d');
 
             // Configure text properties for "STATUE OF UNITY"
-            const fontSize = Math.max(24, Math.round(borderBottom * 0.6));
+            const fontSize = Math.max(24, Math.round(borderSize * 0.5));
             ctx.font = `700 ${fontSize}px 'Cinzel', serif`;
 
             // Vibrant gradient fill for text
-            const textGradient = ctx.createLinearGradient(0, h - borderBottom, w, h);
+            const textGradient = ctx.createLinearGradient(0, h - borderSize, w, h);
             textGradient.addColorStop(0, '#d4af37');
             textGradient.addColorStop(1, '#aa7c11');
             ctx.fillStyle = textGradient;
@@ -1306,7 +1334,7 @@
             ctx.shadowOffsetY = 2;
 
             const textX = w / 2;
-            const textY = h - (borderBottom / 2);
+            const textY = h - (borderSize / 2);
 
             ctx.fillText('STATUE OF UNITY', textX, textY);
 
@@ -1316,18 +1344,15 @@
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
 
-            // Draw Logo inside the actual photo frame
+            // Draw Logo inside the border (bottom right)
             if (logoImg.complete && logoImg.naturalWidth !== 0) {
-                const maxLogoHeight = vH * 0.12; // 12% of photo height (smaller)
+                const logoHeight = Math.round(borderSize * 0.6); // Scale to fit nicely in the border
                 const aspectRatio = logoImg.naturalWidth / logoImg.naturalHeight;
-                const logoHeight = maxLogoHeight;
                 const logoWidth = logoHeight * aspectRatio;
 
-                // Padding from the edge of the actual photo frame (reduced to move logo right/down)
-                const padding = Math.round(vH * 0.015);
-
-                const logoX = borderTopLR + vW - logoWidth - padding;
-                const logoY = borderTopLR + vH - logoHeight - padding;
+                // Place logo in the bottom-right corner of the border, with a bit of right padding
+                const logoX = w - logoWidth - Math.round(borderSize * 0.5);
+                const logoY = h - (borderSize / 2) - (logoHeight / 2);
 
                 ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
             }
