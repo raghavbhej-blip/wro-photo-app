@@ -170,7 +170,7 @@
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
+            border: 2px solid var(--glass-border);
             border-radius: 24px;
             padding: 2.5rem;
             box-shadow: var(--card-shadow);
@@ -256,7 +256,7 @@
             border-radius: 16px;
             overflow: hidden;
             position: relative;
-            border: 2px solid var(--glass-border);
+            border: 4px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -270,7 +270,7 @@
             border-radius: 16px;
             overflow: hidden;
             position: relative;
-            border: 2px solid var(--glass-border);
+            border: 4px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -431,7 +431,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid var(--glass-border);
+            border: 2px solid var(--glass-border);
             position: relative;
         }
 
@@ -1263,8 +1263,8 @@
             const vW = video.videoWidth;
             const vH = video.videoHeight;
 
-            const borderTopLR = Math.round(vW * 0.03); // 3% border left/right/top
-            const borderBottom = Math.round(vH * 0.12); // 12% border bottom
+            const borderTopLR = Math.round(vW * 0.05); // 5% border left/right/top
+            const borderBottom = Math.round(vH * 0.16); // 16% border bottom
 
             processCanvas.width = vW + (borderTopLR * 2);
             processCanvas.height = vH + borderTopLR + borderBottom;
