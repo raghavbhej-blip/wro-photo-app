@@ -1,0 +1,11 @@
+{
+  "name": "human-detection-app",
+  "version": "1.0.0",
+  "description": "Real-time client-side human detection app using TensorFlow.js",
+  "scripts": {
+    "dev": "npx -y http-server -p 8080"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

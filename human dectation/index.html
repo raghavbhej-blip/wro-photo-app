@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Human Guard - [WIP Build v0.2.0]</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(13, 20, 35, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+
+            /* Status Colors */
+            --color-no-camera: #ef4444;
+            --color-no-camera-rgb: 239, 68, 68;
+            --color-scanning: #f59e0b;
+            --color-scanning-rgb: 245, 158, 11;
+            --color-detected: #10b981;
+            --color-detected-rgb: 16, 185, 129;
+
+            /* Interactive Colors */
+            --accent-violet: #6366f1;
+            --accent-indigo: #4f46e5;
+            --font-outfit: 'Outfit', sans-serif;
+            --font-rajdhani: 'Rajdhani', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-outfit);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.05) 0%, transparent 40%);
+        }
+
+        /* Engineering Blueprint Grid Background */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(99, 102, 241, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(99, 102, 241, 0.02) 1px, transparent 1px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Hazard WIP Banner at the Top */
+        .wip-hazard-banner {
+            width: 100%;
+            background: repeating-linear-gradient(-45deg,
+                    #d97706,
+                    #d97706 15px,
+                    #111827 15px,
+                    #111827 30px);
+            color: #ffffff;
+            font-family: var(--font-rajdhani);
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-align: center;
+            padding: 0.5rem;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            border-bottom: 2px solid #f59e0b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .wip-tag-pulse {
+            background: #ef4444;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            animation: warning-blink 1s infinite alternate;
+        }
+
+        @keyframes warning-blink {
+            0% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Main Container */
+        .app-container {
+            width: 90%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding: 1.5rem 0 3rem 0;
+            position: relative;
+        }
+
+        /* Header & Title */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            z-index: 10;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-icon {
+            width: 2.2rem;
+            height: 2.2rem;
+            color: #f59e0b;
+            filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.3));
+        }
+
+        h1 {
+            font-family: var(--font-rajdhani);
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            background: linear-gradient(135deg, #ffffff 30%, #fbd38d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .dev-badge {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: #f59e0b;
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        /* Camera Viewer Panel */
+        .viewer-panel {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #030712;
+            border-radius: 1rem;
+            border: 2px dashed rgba(245, 158, 11, 0.3);
+            /* Blueprint dashed border */
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Blueprint Corner Crosshairs */
+        .viewer-panel::before {
+            content: '+';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: rgba(245, 158, 11, 0.4);
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            z-index: 4;
+        }
+
+        .viewer-panel::after {
+            content: '+';
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(245, 158, 11, 0.4);
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            z-index: 4;
+        }
+
+        /* Watermark */
+        .wip-watermark {
+            position: absolute;
+            font-size: 4rem;
+            font-family: var(--font-rajdhani);
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.02);
+            transform: rotate(-15deg);
+            pointer-events: none;
+            user-select: none;
+            z-index: 1;
+        }
+
+        /* Video & Canvas Elements */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Video wrapper grid overlay */
+        .video-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-size: 30px 30px;
+            background-image:
+                linear-gradient(to right, rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            display: none;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            transform: scaleX(-1);
+        }
+
+        /* Scanning Overlay Line */
+        .scanning-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg,
+                    transparent,
+                    rgba(245, 158, 11, 0.3) 15%,
+                    rgba(245, 158, 11, 0.8) 50%,
+                    rgba(245, 158, 11, 0.3) 85%,
+                    transparent);
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.7);
+            z-index: 3;
+            pointer-events: none;
+            animation: scan 4s linear infinite;
+            display: none;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0%;
+            }
+
+            50% {
+                top: 100%;
+            }
+
+            100% {
+                top: 0%;
+            }
+        }
+
+        /* Status Indicator Badge (Top Right) */
+        .status-badge {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 1rem;
+            background: rgba(13, 20, 35, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            /* Industrial squared corners */
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .status-text {
+            font-family: var(--font-rajdhani);
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        /* Badge Status States */
+        .status-badge.state-no-camera {
+            border-color: rgba(var(--color-no-camera-rgb), 0.3);
+            box-shadow: 0 0 15px rgba(var(--color-no-camera-rgb), 0.15);
+        }
+
+        .status-badge.state-no-camera .status-dot {
+            background-color: var(--color-no-camera);
+            box-shadow: 0 0 8px var(--color-no-camera);
+            animation: pulse-no-camera 2s infinite;
+        }
+
+        .status-badge.state-no-camera .status-text {
+            color: var(--color-no-camera);
+        }
+
+        .status-badge.state-scanning {
+            border-color: rgba(var(--color-scanning-rgb), 0.3);
+            box-shadow: 0 0 15px rgba(var(--color-scanning-rgb), 0.15);
+        }
+
+        .status-badge.state-scanning .status-dot {
+            background-color: var(--color-scanning);
+            box-shadow: 0 0 8px var(--color-scanning);
+            animation: pulse-scanning 1.5s infinite;
+        }
+
+        .status-badge.state-scanning .status-text {
+            color: var(--color-scanning);
+        }
+
+        .status-badge.state-detected {
+            border-color: rgba(var(--color-detected-rgb), 0.5);
+            box-shadow: 0 0 20px rgba(var(--color-detected-rgb), 0.3);
+            transform: scale(1.03);
+        }
+
+        .status-badge.state-detected .status-dot {
+            background-color: var(--color-detected);
+            box-shadow: 0 0 12px var(--color-detected);
+            animation: pulse-detected 0.8s infinite alternate;
+        }
+
+        .status-badge.state-detected .status-text {
+            color: var(--color-detected);
+        }
+
+        @keyframes pulse-no-camera {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes pulse-scanning {
+
+            0%,
+            100% {
+                opacity: 0.7;
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.15);
+            }
+        }
+
+        @keyframes pulse-detected {
+            0% {
+                transform: scale(0.9);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.2);
+                opacity: 1;
+                box-shadow: 0 0 16px var(--color-detected);
+            }
+        }
+
+        /* Splash Screen overlay inside Viewer */
+        .viewer-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.25rem;
+            z-index: 8;
+            background: radial-gradient(circle at center, rgba(13, 20, 35, 0.96) 0%, rgba(3, 7, 18, 0.98) 100%);
+            padding: 2rem;
+            text-align: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .viewer-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .overlay-icon {
+            width: 4rem;
+            height: 4rem;
+            color: #f59e0b;
+            opacity: 0.8;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .overlay-title {
+            font-family: var(--font-rajdhani);
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .overlay-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            max-width: 380px;
+            line-height: 1.5;
+        }
+
+        /* Primary Button */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.8rem 1.8rem;
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 4px;
+            color: white;
+            font-family: var(--font-outfit);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.25);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);
+            border-color: rgba(245, 158, 11, 0.6);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary svg {
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 3px solid rgba(245, 158, 11, 0.1);
+            border-top: 3px solid #f59e0b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: var(--font-outfit);
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(245, 158, 11, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary svg {
+            width: 1.1rem;
+            height: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Floating Exit Fullscreen Button (Cross) */
+        .exit-fullscreen-btn {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.25rem;
+            width: 2.8rem;
+            height: 2.8rem;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .exit-fullscreen-btn:hover {
+            background: rgba(239, 68, 68, 1);
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        }
+
+        .exit-fullscreen-btn svg {
+            width: 1.2rem;
+            height: 1.2rem;
+            stroke-width: 2.5;
+        }
+
+        /* Fullscreen state overrides */
+        .viewer-panel:fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            aspect-ratio: auto !important;
+            border-radius: 0 !important;
+            border: none !important;
+            max-width: none !important;
+        }
+
+        .viewer-panel:-webkit-full-screen {
+            width: 100vw !important;
+            height: 100vh !important;
+            border-radius: 0 !important;
+        }
+
+        .viewer-panel:fullscreen .exit-fullscreen-btn {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1);
+        }
+
+        /* Diagnostics Console Log Terminal (WIP Look) */
+        .console-panel {
+            background: #030712;
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            width: 100%;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-rajdhani);
+            font-weight: 700;
+            color: #f59e0b;
+            font-size: 0.85rem;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+            padding-bottom: 0.4rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .console-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .console-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #f59e0b;
+            animation: console-blink 0.8s infinite alternate;
+        }
+
+        @keyframes console-blink {
+            0% {
+                opacity: 0.3;
+            }
+
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 8px #f59e0b;
+            }
+        }
+
+        .console-body {
+            height: 120px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Scrollbar for Terminal */
+        .console-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .console-body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .console-body::-webkit-scrollbar-thumb {
+            background: rgba(245, 158, 11, 0.2);
+            border-radius: 3px;
+        }
+
+        .console-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(245, 158, 11, 0.4);
+        }
+
+        .console-line {
+            line-height: 1.4;
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .console-time {
+            color: #4b5563;
+            flex-shrink: 0;
+        }
+
+        .console-tag {
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .console-tag.sys {
+            color: #a78bfa;
+        }
+
+        .console-tag.cam {
+            color: #60a5fa;
+        }
+
+        .console-tag.det {
+            color: #34d399;
+        }
+
+        .console-tag.err {
+            color: #f87171;
+        }
+
+        .console-msg {
+            color: #e5e7eb;
+        }
+
+        /* Metadata Overlay (Bottom Left) */
+        .detection-meta {
+            position: absolute;
+            bottom: 1.25rem;
+            left: 1.25rem;
+            background: rgba(13, 20, 35, 0.9);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 1rem;
+            border-radius: 4px;
+            z-index: 10;
+            display: none;
+            /* Controlled via JS */
+            flex-direction: column;
+            gap: 0.2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .detection-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            font-family: var(--font-rajdhani);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .detection-meta-label {
+            color: var(--text-secondary);
+        }
+
+        .detection-meta-value {
+            color: var(--text-primary);
+        }
+
+        .detection-meta-value.detected-count {
+            color: var(--color-detected);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Hazard Banner (WIP Look) -->
+    <div class="wip-hazard-banner">
+        <span><span class="wip-tag-pulse">WIP</span> STABLE_DEVELOPMENT_BUILD v0.2.0</span>
+        <span>//</span>
+        <span>LOCAL_DEVICES_CALIBRATION: ONLINE</span>
+        <span>//</span>
+        <span>TENSORFLOW_INTEGRATION_TEST_ENV</span>
+    </div>
+
+    <div class="app-container">
+
+        <!-- Header -->
+        <header>
+            <div class="brand-title">
+                <svg class="brand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                    </path>
+                </svg>
+                <h1>AI Human Guard</h1>
+                <span class="dev-badge">DEBUG_CONSOLE_ON</span>
+            </div>
+        </header>
+
+        <!-- Main Viewer Panel (Can be Fullscreened) -->
+        <div class="viewer-panel" id="viewer-panel">
+
+            <!-- Floating Exit Fullscreen Button (Cross) -->
+            <button class="exit-fullscreen-btn" id="btn-exit-fullscreen" aria-label="Exit Fullscreen">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+
+            <!-- Floating Status Badge (Top Right) -->
+            <div class="status-badge state-no-camera" id="status-badge">
+                <span class="status-dot"></span>
+                <span class="status-text" id="status-text">No Camera</span>
+            </div>
+
+            <!-- Background Watermark -->
+            <div class="wip-watermark">WIP_BUILD_DRAFT</div>
+
+            <!-- Video & Canvas stream area -->
+            <div class="video-wrapper" id="video-wrapper">
+                <video id="webcam" autoplay playsinline muted></video>
+                <canvas id="overlay"></canvas>
+                <div class="scanning-line" id="scanning-line"></div>
+            </div>
+
+            <!-- Detection Metadata Display (Bottom Left) -->
+            <div class="detection-meta" id="detection-meta">
+                <div class="detection-meta-row">
+                    <span class="detection-meta-label">Target Class:</span>
+                    <span class="detection-meta-value">Human (Person)</span>
+                </div>
+                <div class="detection-meta-row">
+                    <span class="detection-meta-label">Detected:</span>
+                    <span class="detection-meta-value detected-count" id="meta-count">0</span>
+                </div>
+                <div class="detection-meta-row">
+                    <span class="detection-meta-label">Latency:</span>
+                    <span class="detection-meta-value" id="meta-latency">0 ms</span>
+                </div>
+            </div>
+
+            <!-- Initial Overlay Action / Loading Screen -->
+            <div class="viewer-overlay" id="viewer-overlay">
+                <!-- Loader Graphic -->
+                <div class="spinner" id="overlay-loader" style="display: none;"></div>
+
+                <!-- Welcome/Permission Graphic -->
+                <svg class="overlay-icon" id="overlay-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z">
+                    </path>
+                </svg>
+
+                <h2 class="overlay-title" id="overlay-title">WIP System Calibration</h2>
+                <p class="overlay-desc" id="overlay-desc">Initialize local TensorFlow dependencies and request system
+                    camera permissions to evaluate performance metrics in real-time.</p>
+
+                <button class="btn-primary" id="btn-initialize">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span>Run Verification App</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Controls panel below the viewer -->
+        <div class="controls-panel">
+            <button class="btn-secondary" id="btn-toggle-camera-main" style="display: none;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                    </path>
+                </svg>
+                <span id="btn-toggle-camera-text">Stop Feed</span>
+            </button>
+
+            <button class="btn-secondary" id="btn-fullscreen-toggle">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                    </path>
+                </svg>
+                <span>Fullscreen</span>
+            </button>
+        </div>
+
+        <!-- Diagnostics Log Terminal (WIP feature) -->
+        <div class="console-panel">
+            <div class="console-header">
+                <span>Diagnostics & Console Logging</span>
+                <div class="console-indicator">
+                    <div class="console-dot"></div>
+                    <span>WIP_LOGGER</span>
+                </div>
+            </div>
+            <div class="console-body" id="console-body">
+                <!-- Log lines will populate dynamically here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script loading -->
+    <!-- Load TensorFlow.js core first -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <!-- Load the COCO-SSD pre-trained model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
+    <script>
+        // Application State
+        let model = null;
+        let stream = null;
+        let animationFrameId = null;
+        let isDetecting = false;
+        let lastHumanCount = -1;
+
+        // DOM Elements
+        const viewerPanel = document.getElementById('viewer-panel');
+        const videoWrapper = document.getElementById('video-wrapper');
+        const webcam = document.getElementById('webcam');
+        const overlay = document.getElementById('overlay');
+        const ctx = overlay.getContext('2d');
+        const scanningLine = document.getElementById('scanning-line');
+
+        // Badge Elements
+        const statusBadge = document.getElementById('status-badge');
+        const statusText = document.getElementById('status-text');
+
+        // Metadata Panel Elements
+        const detectionMeta = document.getElementById('detection-meta');
+        const metaCount = document.getElementById('meta-count');
+        const metaLatency = document.getElementById('meta-latency');
+
+        // Overlay Elements
+        const viewerOverlay = document.getElementById('viewer-overlay');
+        const overlayLoader = document.getElementById('overlay-loader');
+        const overlayIcon = document.getElementById('overlay-icon');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+        const btnInitialize = document.getElementById('btn-initialize');
+
+        // Controls Elements
+        const btnToggleCameraMain = document.getElementById('btn-toggle-camera-main');
+        const btnToggleCameraText = document.getElementById('btn-toggle-camera-text');
+        const btnFullscreenToggle = document.getElementById('btn-fullscreen-toggle');
+        const btnExitFullscreen = document.getElementById('btn-exit-fullscreen');
+
+        // Log Console
+        const consoleBody = document.getElementById('console-body');
+
+        // Initial setup log
+        logToConsole("Application initialized. Awaiting user click to activate model dependencies.", "sys");
+
+        // Logger Function
+        function logToConsole(message, category = 'sys') {
+            if (!consoleBody) return;
+
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+
+            const line = document.createElement('div');
+            line.className = 'console-line';
+
+            let tagColorClass = 'sys';
+            let tagText = '[SYSTEM]';
+
+            if (category === 'cam') {
+                tagColorClass = 'cam';
+                tagText = '[CAMERA]';
+            } else if (category === 'det') {
+                tagColorClass = 'det';
+                tagText = '[DETECT]';
+            } else if (category === 'err') {
+                tagColorClass = 'err';
+                tagText = '[ERROR ]';
+            }
+
+            line.innerHTML = `
+                <span class="console-time">[${timeStr}]</span>
+                <span class="console-tag ${tagColorClass}">${tagText}</span>
+                <span class="console-msg">${message}</span>
+            `;
+
+            consoleBody.appendChild(line);
+
+            // Auto scroll
+            consoleBody.scrollTop = consoleBody.scrollHeight;
+
+            // Limit output
+            while (consoleBody.children.length > 50) {
+                consoleBody.removeChild(consoleBody.firstChild);
+            }
+        }
+
+        // Initialize / Activate System
+        btnInitialize.addEventListener('click', async () => {
+            try {
+                logToConsole("Calibration triggered. Initializing engine setup.", "sys");
+                setOverlayLoadingState(true);
+
+                // 1. Load the COCO-SSD model
+                if (!model) {
+                    updateOverlayProgress("Loading TensorFlow COCO-SSD...", "Fetching model architectures and weight values...");
+                    logToConsole("Requesting COCO-SSD network weights from CDN...", "sys");
+                    const startLoad = performance.now();
+                    model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
+                    const loadTime = Math.round(performance.now() - startLoad);
+                    logToConsole(`Tensorflow weights successfully loaded in ${loadTime}ms. Ready for image streams.`, "sys");
+                }
+
+                // 2. Request camera stream
+                updateOverlayProgress("Accessing Capture Device...", "Connecting to client hardware camera...");
+                logToConsole("Requesting hardware user media webcam access...", "cam");
+                await startCamera();
+                logToConsole("Webcam connection established. Canvas overlay matching stream.", "cam");
+
+                // 3. Hide overlay and begin recognition
+                setupCanvas();
+                hideOverlay();
+                startDetection();
+
+            } catch (error) {
+                console.error("Initialization failure:", error);
+                logToConsole(`Initialization failed: ${error.name} - ${error.message}`, "err");
+                handleInitError(error);
+            }
+        });
+
+        // Camera Operations
+        async function startCamera() {
+            const constraints = {
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            };
+
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            webcam.srcObject = stream;
+
+            await new Promise((resolve) => {
+                webcam.onloadedmetadata = () => {
+                    webcam.play();
+                    resolve();
+                };
+            });
+
+            webcam.style.display = 'block';
+            scanningLine.style.display = 'block';
+
+            btnToggleCameraMain.style.display = 'inline-flex';
+            btnToggleCameraText.textContent = "Stop Feed";
+        }
+
+        function stopCamera() {
+            logToConsole("Deactivating camera stream. Halting recognition loop.", "sys");
+            isDetecting = false;
+            lastHumanCount = -1;
+
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+
+            webcam.srcObject = null;
+            webcam.style.display = 'none';
+            scanningLine.style.display = 'none';
+
+            // Clear canvas
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+            // Reset Badge
+            updateStatusBadge('no-camera', 'No Camera');
+
+            // Hide info overlays
+            detectionMeta.style.display = 'none';
+            btnToggleCameraMain.style.display = 'none';
+
+            showOverlayPrompt();
+            logToConsole("Verification engine returned to idle state.", "sys");
+        }
+
+        // Toggle Camera Feed (Stop/Start)
+        btnToggleCameraMain.addEventListener('click', () => {
+            if (stream) {
+                stopCamera();
+            } else {
+                btnInitialize.click();
+            }
+        });
+
+        // Canvas Sizing
+        function setupCanvas() {
+            overlay.width = webcam.videoWidth;
+            overlay.height = webcam.videoHeight;
+        }
+
+        window.addEventListener('resize', () => {
+            if (stream) {
+                setupCanvas();
+            }
+        });
+
+        // Detection Loop
+        async function startDetection() {
+            isDetecting = true;
+            detectionMeta.style.display = 'flex';
+            updateStatusBadge('scanning', 'Scanning');
+            logToConsole("Neural network detection loop initiated.", "sys");
+
+            async function loop() {
+                if (!isDetecting) return;
+
+                const startTime = performance.now();
+                let predictions = [];
+
+                try {
+                    predictions = await model.detect(webcam);
+                } catch (err) {
+                    console.error("Detection error:", err);
+                }
+
+                const duration = Math.round(performance.now() - startTime);
+                const humans = predictions.filter(pred => pred.class === 'person');
+
+                // Draw targets
+                drawOverlay(humans);
+
+                // Set metadata values
+                metaCount.textContent = humans.length;
+                metaLatency.textContent = `${duration} ms`;
+
+                // Update Badge state
+                if (humans.length > 0) {
+                    updateStatusBadge('detected', `Human Detected (${humans.length})`);
+                } else {
+                    updateStatusBadge('scanning', 'Scanning (No Human)');
+                }
+
+                // Check count difference to update diagnostics log
+                if (humans.length !== lastHumanCount) {
+                    if (humans.length > 0) {
+                        const maxConf = Math.max(...humans.map(h => h.score));
+                        logToConsole(`Target acquired: ${humans.length} human(s) detected. High confidence: ${Math.round(maxConf * 100)}%.`, "det");
+                    } else {
+                        logToConsole("Target lost: No human in frame scanning area.", "det");
+                    }
+                    lastHumanCount = humans.length;
+                }
+
+                animationFrameId = requestAnimationFrame(loop);
+            }
+
+            loop();
+        }
+
+        // Render Canvas Bounding Box Overlays
+        function drawOverlay(humans) {
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+            if (humans.length === 0) return;
+
+            humans.forEach(human => {
+                const [x, y, width, height] = human.bbox;
+                const confidence = human.score;
+
+                ctx.save();
+
+                // Tech cyber box style
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = 'rgba(16, 185, 129, 0.7)';
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(x, y, width, height);
+
+                // Translucent background box
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.04)';
+                ctx.fillRect(x, y, width, height);
+
+                // Corners brackets (Industrial styling)
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = 'rgba(16, 185, 129, 0.8)';
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 3.5;
+                const cornerLength = Math.min(16, width * 0.15, height * 0.15);
+
+                // Top-left corner
+                ctx.beginPath();
+                ctx.moveTo(x, y + cornerLength);
+                ctx.lineTo(x, y);
+                ctx.lineTo(x + cornerLength, y);
+                ctx.stroke();
+
+                // Top-right corner
+                ctx.beginPath();
+                ctx.moveTo(x + width - cornerLength, y);
+                ctx.lineTo(x + width, y);
+                ctx.lineTo(x + width, y + cornerLength);
+                ctx.stroke();
+
+                // Bottom-left corner
+                ctx.beginPath();
+                ctx.moveTo(x, y + height - cornerLength);
+                ctx.lineTo(x, y + height);
+                ctx.lineTo(x + cornerLength, y + height);
+                ctx.stroke();
+
+                // Bottom-right corner
+                ctx.beginPath();
+                ctx.moveTo(x + width - cornerLength, y + height);
+                ctx.lineTo(x + width, y + height);
+                ctx.lineTo(x + width, y + height - cornerLength);
+                ctx.stroke();
+
+                // Label tag
+                ctx.shadowBlur = 0;
+                const label = `HUMAN : ${Math.round(confidence * 100)}%`;
+                ctx.font = '700 11px Rajdhani';
+                ctx.textBaseline = 'top';
+                const labelWidth = ctx.measureText(label).width + 12;
+
+                let labelY = y - 20;
+                if (labelY < 5) {
+                    labelY = y + 5;
+                }
+
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(x, labelY, labelWidth, 18);
+
+                ctx.fillStyle = '#030712';
+                ctx.fillText(label, x + 6, labelY + 3.5);
+
+                ctx.restore();
+            });
+        }
+
+        // Update Badge Element UI
+        function updateStatusBadge(state, text) {
+            statusBadge.className = 'status-badge';
+
+            if (state === 'no-camera') {
+                statusBadge.classList.add('state-no-camera');
+            } else if (state === 'scanning') {
+                statusBadge.classList.add('state-scanning');
+            } else if (state === 'detected') {
+                statusBadge.classList.add('state-detected');
+            }
+
+            statusText.textContent = text;
+        }
+
+        // Fullscreen API Logic
+        btnFullscreenToggle.addEventListener('click', toggleFullscreen);
+        btnExitFullscreen.addEventListener('click', exitFullscreen);
+
+        // Double-click to fullscreen
+        videoWrapper.addEventListener('dblclick', () => {
+            if (document.fullscreenElement) {
+                exitFullscreen();
+            } else {
+                toggleFullscreen();
+            }
+        });
+
+        function toggleFullscreen() {
+            logToConsole("Requesting panel fullscreen transformation.", "sys");
+            if (viewerPanel.requestFullscreen) {
+                viewerPanel.requestFullscreen();
+            } else if (viewerPanel.webkitRequestFullscreen) {
+                viewerPanel.webkitRequestFullscreen();
+            } else if (viewerPanel.msRequestFullscreen) {
+                viewerPanel.msRequestFullscreen();
+            }
+        }
+
+        function exitFullscreen() {
+            logToConsole("Requesting fullscreen exit. Standard coordinates restoring.", "sys");
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+        function handleFullscreenChange() {
+            if (document.fullscreenElement) {
+                btnFullscreenToggle.innerHTML = `
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5"></path>
+                    </svg>
+                    <span>Exit Fullscreen</span>
+                `;
+            } else {
+                btnFullscreenToggle.innerHTML = `
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                    </svg>
+                    <span>Fullscreen</span>
+                `;
+                if (stream) {
+                    setTimeout(setupCanvas, 150);
+                }
+            }
+        }
+
+        // Overlay Utilities
+        function setOverlayLoadingState(isLoading) {
+            if (isLoading) {
+                overlayIcon.style.display = 'none';
+                btnInitialize.style.display = 'none';
+                overlayLoader.style.display = 'block';
+            } else {
+                overlayLoader.style.display = 'none';
+                overlayIcon.style.display = 'block';
+                btnInitialize.style.display = 'inline-flex';
+            }
+        }
+
+        function updateOverlayProgress(title, desc) {
+            overlayTitle.textContent = title;
+            overlayDesc.textContent = desc;
+        }
+
+        function hideOverlay() {
+            viewerOverlay.classList.add('hidden');
+        }
+
+        function showOverlayPrompt() {
+            viewerOverlay.classList.remove('hidden');
+            setOverlayLoadingState(false);
+
+            overlayIcon.setAttribute('stroke', '#f59e0b');
+            overlayIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+            `;
+            overlayTitle.textContent = "Calibration Deactivated";
+            overlayDesc.textContent = "Click activation to start camera initialization and local recognition logic.";
+            btnInitialize.textContent = "Activate Feed";
+        }
+
+        function handleInitError(error) {
+            viewerOverlay.classList.remove('hidden');
+            setOverlayLoadingState(false);
+
+            overlayIcon.setAttribute('stroke', '#ef4444');
+            overlayIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            `;
+
+            overlayTitle.textContent = "Calibration Error";
+
+            if (error.name === 'NotAllowedError') {
+                overlayDesc.textContent = "Webcam permission rejected. Change browser options and retry.";
+            } else if (error.name === 'NotFoundError') {
+                overlayDesc.textContent = "No camera hardware detected on device.";
+            } else {
+                overlayDesc.textContent = `Initialization failed: ${error.message || 'unknown error'}`;
+            }
+
+            btnInitialize.textContent = "Retry Calibration";
+            updateStatusBadge('no-camera', 'No Camera');
+        }
+    </script>
+</body>
+
+</html>
